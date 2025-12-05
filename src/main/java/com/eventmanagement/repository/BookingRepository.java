@@ -1,52 +1,105 @@
 package com.eventmanagement.repository;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import com.eventmanagement.model.Booking;
-import com.eventmanagement.utils.dbconfig.DataBaseConnection;
 
 public class BookingRepository {
 
-    private static final Connection DB = DataBaseConnection.getConnection();
+    private final java.sql.Connection connection;
 
-    public boolean save(Booking booking) throws SQLException {
-        String sql = "INSERT INTO bookings (booking_id, user_id, event_id, booking_status, booking_date) VALUES (?, ?, ?, ?, ?)";
+    public BookingRepository(java.sql.Connection connection) {
+        this.connection = connection;
+    }
 
-        try (PreparedStatement stmt = DB.prepareStatement(sql)) {
-            stmt.setObject(1, booking.getBooking_id());
-            stmt.setObject(2, booking.getUser_id());
-            stmt.setObject(3, booking.getEvent_id());
-            stmt.setString(4, booking.getBooking_status().name());
-            stmt.setTimestamp(5, new Timestamp(booking.getBooking_date().getTime()));
-            return stmt.executeUpdate() > 0 ? true : false;
+    /**
+     * Create a booking row. Returns generated booking_id (from RETURNING).
+     */
+    public String createBooking(String user_id, String event_id, String booking_status) {
+        java.sql.PreparedStatement ps = null;
+        java.sql.ResultSet rs = null;
+        try {
+            String sql = "INSERT INTO bookings (user_id, event_id, booking_status) VALUES (?, ?, ?) RETURNING booking_id";
+            ps = connection.prepareStatement(sql);
+            ps.setObject(1, java.util.UUID.fromString(user_id));
+            ps.setObject(2, java.util.UUID.fromString(event_id));
+            ps.setString(3, booking_status);
+            rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getObject("booking_id").toString();
+            } else {
+                throw new RuntimeException("Failed to obtain booking id after insert");
+            }
+        } catch (java.sql.SQLException ex) {
+            throw new RuntimeException("Error creating booking", ex);
+        } finally {
+            closeQuietly(rs);
+            closeQuietly(ps);
         }
     }
 
-    public List<Booking> findByUserId(UUID userId) throws SQLException {
-        List<Booking> bookings = new ArrayList<>();
-        String sql = "SELECT * FROM bookings WHERE user_id = ?";
-        try (PreparedStatement stmt = DB.prepareStatement(sql)) {
-            stmt.setObject(1, userId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    Booking booking = new Booking();
-                    booking.setBooking_id((UUID) rs.getObject("booking_id"));
-                    booking.setUser_id((UUID) rs.getObject("user_id"));
-                    booking.setEvent_id((UUID) rs.getObject("event_id"));
-                    booking.setBooking_status(Enum.valueOf(com.eventmanagement.model.BookingStatus.class,
-                            rs.getString("booking_status")));
-                    booking.setBooking_date(rs.getTimestamp("booking_date"));
-                    bookings.add(booking);
-                }
+    /**
+     * Insert booking_seats entries in batch.
+     */
+    public void insertBookingSeats(String booking_id, List<String> seatIds) {
+        if (seatIds == null || seatIds.isEmpty()) return;
+        java.sql.PreparedStatement ps = null;
+        try {
+            String sql = "INSERT INTO booking_seats (booking_id, seat_id) VALUES (?, ?)";
+            ps = connection.prepareStatement(sql);
+            for (String seatId : seatIds) {
+                ps.setObject(1, java.util.UUID.fromString(booking_id));
+                ps.setObject(2, java.util.UUID.fromString(seatId));
+                ps.addBatch();
             }
+            ps.executeBatch();
+        } catch (java.sql.SQLException ex) {
+            throw new RuntimeException("Error inserting booking seats", ex);
+        } finally {
+            closeQuietly(ps);
         }
-        return bookings;
+    }
+
+    /**
+     * Fetch bookings by user
+     */
+    public List<Booking> findBookingsByUser(String user_id) {
+        java.sql.PreparedStatement ps = null;
+        java.sql.ResultSet rs = null;
+        List<Booking> bookings = new ArrayList<>();
+        try {
+            String sql = "SELECT booking_id, user_id, event_id, booking_status, booking_date FROM bookings WHERE user_id = ?";
+            ps = connection.prepareStatement(sql);
+            ps.setObject(1, java.util.UUID.fromString(user_id));
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                Booking b = new Booking();
+                b.setBooking_id(rs.getObject("booking_id").toString());
+                b.setUser_id(rs.getObject("user_id").toString());
+                b.setEvent_id(rs.getObject("event_id").toString());
+                b.setBooking_status(rs.getString("booking_status"));
+                b.setBooking_date(rs.getString("booking_date"));
+                bookings.add(b);
+            }
+            return bookings;
+        } catch (java.sql.SQLException ex) {
+            throw new RuntimeException("Error finding bookings by user", ex);
+        } finally {
+            closeQuietly(rs);
+            closeQuietly(ps);
+        }
+    }
+
+    private void closeQuietly(java.sql.ResultSet rs) {
+        if (rs != null) {
+            try { rs.close(); } catch (Exception ignored) {}
+        }
+    }
+
+    private void closeQuietly(java.sql.Statement st) {
+        if (st != null) {
+            try { st.close(); } catch (Exception ignored) {}
+        }
     }
 }

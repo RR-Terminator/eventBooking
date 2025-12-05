@@ -1,125 +1,127 @@
 package com.eventmanagement.repository;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 import com.eventmanagement.model.Seat;
-import com.eventmanagement.model.SeatType;
-import com.eventmanagement.utils.SQLQueries;
-import com.eventmanagement.utils.dbconfig.DataBaseConnection;
 
 public class SeatRepository {
 
-    private static final Connection DB = DataBaseConnection.getConnection();
+    private final java.sql.Connection connection;
 
-    public void save(Seat seat) throws SQLException {
-        try (PreparedStatement stmt = DB.prepareStatement(SQLQueries.INSERT_SEAT)) {
-            stmt.setObject(1, seat.getSeat_id());
-            stmt.setString(2, seat.getSeat_type().name());
-            stmt.setDouble(3, seat.getSeat_price());
-            stmt.setBoolean(4, seat.getIs_available());
-            stmt.setObject(5, seat.getEvent_id());
-            stmt.executeUpdate();
-        }
+    public SeatRepository(java.sql.Connection connection) {
+        this.connection = connection;
     }
 
-    public void update(Seat seat) throws SQLException {
-        try (PreparedStatement stmt = DB.prepareStatement(SQLQueries.UPDATE_SEAT)) {
-            stmt.setObject(5, seat.getSeat_id());
-            stmt.setString(1, seat.getSeat_type().name());
-            stmt.setDouble(2, seat.getSeat_price());
-            stmt.setBoolean(3, seat.getIs_available());
-            stmt.setObject(4, seat.getUser_id());
-            stmt.executeUpdate();
-        }
-    }
-
-    public List<Seat> findByEventId(UUID eventId) throws SQLException {
+    /**
+     * Fetch seats by event_id and seat_type that are available.
+     * This method does not lock rows. Use getSeatsByIdsForUpdate to lock.
+     */
+    public List<Seat> findAvailableSeatsByEventAndType(String event_id, String seat_type) {
+        java.sql.PreparedStatement ps = null;
+        java.sql.ResultSet rs = null;
         List<Seat> seats = new ArrayList<>();
-        try (PreparedStatement stmt = DB.prepareStatement(SQLQueries.FETCH_SEATS_BY_EVENT_ID)) {
-            stmt.setObject(1, eventId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    Seat seat = new Seat();
-                    seat.setSeat_id((UUID) rs.getObject("seat_id"));
-                    seat.setSeat_type(SeatType.valueOf(rs.getString("seat_type")));
-                    seat.setSeat_price(rs.getDouble("seat_price"));
-                    seat.setIs_available(rs.getBoolean("is_available"));
-                    seat.setEvent_id((UUID) rs.getObject("event_id"));
-                    seat.setUser_id((UUID) rs.getObject("user_id"));
-                    seats.add(seat);
-                }
-            }
-        }
-        return seats;
-    }
-
-    public Map<SeatType, Integer> getAvailableSeats(UUID eventId) throws SQLException {
-        String query = "SELECT seat_type, COUNT(*) AS seat_count " +
-                "FROM seats " +
-                "WHERE event_id = ? AND is_available = true " +
-                "GROUP BY seat_type";
-
-        Map<SeatType, Integer> availableSeats = new HashMap<>();
-
-        try (PreparedStatement stmt = DB.prepareStatement(query)) {
-            stmt.setObject(1, eventId);
-            ResultSet rs = stmt.executeQuery();
-
+        try {
+            String sql = "SELECT seat_id, seat_type, seat_price, is_available, event_id FROM seats "
+                       + "WHERE event_id = ? AND seat_type = ? AND is_available = true";
+            ps = connection.prepareStatement(sql);
+            ps.setObject(1, java.util.UUID.fromString(event_id));
+            ps.setString(2, seat_type);
+            rs = ps.executeQuery();
             while (rs.next()) {
-                SeatType type = SeatType.valueOf(rs.getString("seat_type"));
-                int count = rs.getInt("seat_count");
-                availableSeats.put(type, count);
+                Seat s = new Seat();
+                s.setSeat_id(rs.getObject("seat_id").toString());
+                s.setSeat_type(rs.getString("seat_type"));
+                s.setSeat_price(rs.getDouble("seat_price"));
+                s.setIs_available(rs.getBoolean("is_available"));
+                s.setEvent_id(rs.getObject("event_id").toString());
+                seats.add(s);
             }
+            return seats;
+        } catch (java.sql.SQLException ex) {
+            throw new RuntimeException("Error finding available seats", ex);
+        } finally {
+            closeQuietly(rs);
+            closeQuietly(ps);
         }
-
-        return availableSeats;
     }
 
-    public List<Seat> getAvailableSeatsOfType(UUID event_id, SeatType seatType) {
-        
-        String sql = """
-                SELECT * FROM seats WHERE event_id = ? AND seat_type = ? AND is_available = true;
-                """;
-
-
-        List<Seat> availableSeatList = new ArrayList<>();
-
-        try (PreparedStatement stmt = DB.prepareStatement(sql)) {
-            // Set the parameters for the SQL query
-            stmt.setObject(1, event_id);
-            stmt.setString(2, seatType.toString());
-
-          
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                   
-                    Seat seat = new Seat();
-
-                
-                    seat.setSeat_id((UUID) rs.getObject("seat_id"));
-                    seat.setEvent_id((UUID) rs.getObject("event_id"));
-                    seat.setSeat_type(SeatType.valueOf(rs.getString("seat_type")));
-                    seat.setSeat_price(rs.getDouble("seat_price"));
-                    seat.setIs_available(rs.getBoolean("is_available"));
-
-                
-                    availableSeatList.add(seat);
-                }
+    /**
+     * Fetch seats by a list of seat_ids and lock them FOR UPDATE.
+     * Returns the Seat objects in the same order they appear in the result set.
+     */
+    public List<Seat> getSeatsByIdsForUpdate(List<String> seatIds) {
+        if (seatIds == null || seatIds.isEmpty()) return new ArrayList<>();
+        java.sql.PreparedStatement ps = null;
+        java.sql.ResultSet rs = null;
+        List<Seat> seats = new ArrayList<>();
+        try {
+            StringBuilder sb = new StringBuilder();
+            sb.append("SELECT seat_id, seat_type, seat_price, is_available, event_id FROM seats WHERE seat_id IN (");
+            for (int i = 0; i < seatIds.size(); i++) {
+                sb.append("?");
+                if (i < seatIds.size() - 1) sb.append(",");
             }
-        } catch (SQLException e) {
-            // Print the exception message (you can log it or rethrow it as needed)
-            System.err.println("Error fetching available seats: " + e.getMessage());
+            sb.append(") FOR UPDATE");
+            ps = connection.prepareStatement(sb.toString());
+            for (int i = 0; i < seatIds.size(); i++) {
+                ps.setObject(i + 1, java.util.UUID.fromString(seatIds.get(i)));
+            }
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                Seat s = new Seat();
+                s.setSeat_id(rs.getObject("seat_id").toString());
+                s.setSeat_type(rs.getString("seat_type"));
+                s.setSeat_price(rs.getDouble("seat_price"));
+                s.setIs_available(rs.getBoolean("is_available"));
+                s.setEvent_id(rs.getObject("event_id").toString());
+                seats.add(s);
+            }
+            return seats;
+        } catch (java.sql.SQLException ex) {
+            throw new RuntimeException("Error locking seats for update", ex);
+        } finally {
+            closeQuietly(rs);
+            closeQuietly(ps);
         }
-
-        return availableSeatList;
     }
 
+    /**
+     * Update is_available flag for a list of seats (single batch update).
+     */
+    public void updateSeatAvailability(List<String> seatIds, boolean isAvailable) {
+        if (seatIds == null || seatIds.isEmpty()) return;
+        java.sql.PreparedStatement ps = null;
+        try {
+            StringBuilder sb = new StringBuilder();
+            sb.append("UPDATE seats SET is_available = ? WHERE seat_id IN (");
+            for (int i = 0; i < seatIds.size(); i++) {
+                sb.append("?");
+                if (i < seatIds.size() - 1) sb.append(",");
+            }
+            sb.append(")");
+            ps = connection.prepareStatement(sb.toString());
+            ps.setBoolean(1, isAvailable);
+            for (int i = 0; i < seatIds.size(); i++) {
+                ps.setObject(2 + i, java.util.UUID.fromString(seatIds.get(i)));
+            }
+            ps.executeUpdate();
+        } catch (java.sql.SQLException ex) {
+            throw new RuntimeException("Error updating seat availability", ex);
+        } finally {
+            closeQuietly(ps);
+        }
+    }
+
+    private void closeQuietly(java.sql.ResultSet rs) {
+        if (rs != null) {
+            try { rs.close(); } catch (Exception ignored) {}
+        }
+    }
+
+    private void closeQuietly(java.sql.Statement st) {
+        if (st != null) {
+            try { st.close(); } catch (Exception ignored) {}
+        }
+    }
 }

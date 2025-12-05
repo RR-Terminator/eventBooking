@@ -1,53 +1,51 @@
 package com.eventmanagement.service;
 
-
-import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
 
+import com.eventmanagement.Exceptions.InvalidEventIdException;
 import com.eventmanagement.model.Event;
-import com.eventmanagement.model.Seat;
-import com.eventmanagement.model.SeatType;
 import com.eventmanagement.repository.EventRepository;
-import com.eventmanagement.repository.SeatRepository;
 
 public class EventService {
 
-    private final EventRepository eventRepo = new EventRepository();
-    private final SeatRepository seatRepo = new SeatRepository();
+    private final EventRepository eventRepository;
+
+    public EventService(java.sql.Connection connection) {
+        this.eventRepository = new EventRepository(connection);
+    }
+
+    public Event getEventById(String event_id) {
+        Event e = eventRepository.findById(event_id);
+        if (e == null)
+            throw new InvalidEventIdException("Event not found: " + event_id);
+        return e;
+    }
+
+    public boolean cancelEvent(String event_id) {
+        return eventRepository.deactivateEvent(event_id);
+    }
 
     /**
-     * Creates an event and automatically inserts seats of all types.
+     * Returns all ACTIVE events.
      */
-    public UUID createEvent(Event event) throws SQLException {
-        UUID eventId = eventRepo.save(event);
-
-        // Insert seats
-        insertSeats(eventId, event.getNumber_of_bronze_seats(), SeatType.BRONZE);
-        insertSeats(eventId, event.getNumber_of_silver_seats(), SeatType.SILVER);
-        insertSeats(eventId, event.getNumber_of_gold_seats(), SeatType.GOLD);
-        insertSeats(eventId, event.getNumber_of_platinum_seats(), SeatType.PLATINUM);
-
-        return eventId;
+    public List<Event> getAllEvents() {
+        return eventRepository.findAllActiveEvents();
     }
 
-    private void insertSeats(UUID eventId, int count, SeatType type) throws SQLException {
-        for (int i = 0; i < count; i++) {
-            Seat seat = new Seat(type, type.getValue(), eventId);
-            seatRepo.save(seat);
+    /**
+     * Creates an event and returns the generated event_id.
+     */
+    public String createEvent(Event event) {
+        // Validation (you can expand this with stricter checks)
+        if (event.getEvent_name() == null || event.getEvent_name().trim().isEmpty()) {
+            throw new IllegalArgumentException("Event name cannot be empty");
         }
-    }
 
-    public List<Event> getAllEvents() throws SQLException {
-        return eventRepo.findAll();
-    }
+        if (event.getEvent_date() == null || event.getEvent_date().trim().isEmpty()) {
+            throw new IllegalArgumentException("Event date cannot be empty");
+        }
 
-    public Event getEventById(UUID eventId) throws SQLException {
-        return eventRepo.findById(eventId);
-    }
-
-    public boolean cancelEvent(UUID eventId) throws SQLException {
-        return eventRepo.cancelEvent(eventId);
+        return eventRepository.createEvent(event);
     }
 }
-
