@@ -1,23 +1,30 @@
 package com.eventmanagement.model;
 
+import java.time.LocalDate;
+
 public class Event {
 
     private String event_id;
     private String event_name;
     private String event_description;
-    private String event_date;
+    private LocalDate event_date;
     private String event_venue;
     private boolean event_isActive;
     private String created_at;
     private String updated_at;
+    private int number_of_bronze_seats;
+    private int number_of_silver_seats;
+    private int number_of_gold_seats;
+    private int number_of_platinum_seats;
 
     public Event() {
     }
 
     public Event(String event_id, String event_name, String event_description,
-            String event_date, String event_venue, boolean event_isActive,
-            String created_at, String updated_at) {
-
+            java.time.LocalDate event_date, String event_venue, boolean event_isActive,
+            String created_at, String updated_at,
+            int number_of_bronze_seats, int number_of_silver_seats,
+            int number_of_gold_seats, int number_of_platinum_seats) {
         this.event_id = event_id;
         this.event_name = event_name;
         this.event_description = event_description;
@@ -26,6 +33,10 @@ public class Event {
         this.event_isActive = event_isActive;
         this.created_at = created_at;
         this.updated_at = updated_at;
+        this.number_of_bronze_seats = number_of_bronze_seats;
+        this.number_of_silver_seats = number_of_silver_seats;
+        this.number_of_gold_seats = number_of_gold_seats;
+        this.number_of_platinum_seats = number_of_platinum_seats;
     }
 
     public String getEvent_id() {
@@ -52,11 +63,11 @@ public class Event {
         this.event_description = event_description;
     }
 
-    public String getEvent_date() {
+    public LocalDate getEvent_date() {
         return event_date;
     }
 
-    public void setEvent_date(String event_date) {
+    public void setEvent_date(LocalDate event_date) {
         this.event_date = event_date;
     }
 
@@ -90,5 +101,37 @@ public class Event {
 
     public void setUpdated_at(String updated_at) {
         this.updated_at = updated_at;
+    }
+
+    public int getNumber_of_bronze_seats() {
+        return number_of_bronze_seats;
+    }
+
+    public void setNumber_of_bronze_seats(int number_of_bronze_seats) {
+        this.number_of_bronze_seats = number_of_bronze_seats;
+    }
+
+    public int getNumber_of_silver_seats() {
+        return number_of_silver_seats;
+    }
+
+    public void setNumber_of_silver_seats(int number_of_silver_seats) {
+        this.number_of_silver_seats = number_of_silver_seats;
+    }
+
+    public int getNumber_of_gold_seats() {
+        return number_of_gold_seats;
+    }
+
+    public void setNumber_of_gold_seats(int number_of_gold_seats) {
+        this.number_of_gold_seats = number_of_gold_seats;
+    }
+
+    public int getNumber_of_platinum_seats() {
+        return number_of_platinum_seats;
+    }
+
+    public void setNumber_of_platinum_seats(int number_of_platinum_seats) {
+        this.number_of_platinum_seats = number_of_platinum_seats;
     }
 }

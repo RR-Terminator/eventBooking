@@ -1,7 +1,6 @@
 package com.eventmanagement.service;
 
 import java.util.List;
-import java.util.UUID;
 
 import com.eventmanagement.Exceptions.InvalidEventIdException;
 import com.eventmanagement.model.Event;
@@ -37,13 +36,13 @@ public class EventService {
      * Creates an event and returns the generated event_id.
      */
     public String createEvent(Event event) {
-        // Validation (you can expand this with stricter checks)
+        // Validation (use LocalDate checks, not String checks)
         if (event.getEvent_name() == null || event.getEvent_name().trim().isEmpty()) {
             throw new IllegalArgumentException("Event name cannot be empty");
         }
 
-        if (event.getEvent_date() == null || event.getEvent_date().trim().isEmpty()) {
-            throw new IllegalArgumentException("Event date cannot be empty");
+        if (event.getEvent_date() == null) {
+            throw new IllegalArgumentException("Event date cannot be null");
         }
 
         return eventRepository.createEvent(event);

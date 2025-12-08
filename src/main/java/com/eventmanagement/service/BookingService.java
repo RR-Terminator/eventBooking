@@ -165,11 +165,7 @@ public class BookingService {
         return seatRepository.findAvailableSeatsByEventAndType(eventIdStr, sel.name());
     }
 
-    /**
-     * Returns bookings for a user. This returns what BookingRepository provides.
-     * If you want to populate Booking.bookedSeats for each booking, ask and I will
-     * extend this method to query booking_seats and load Seat objects.
-     */
+
     public List<Booking> getBookingsByUser(String user_id) {
         return bookingRepository.findBookingsByUser(user_id);
     }

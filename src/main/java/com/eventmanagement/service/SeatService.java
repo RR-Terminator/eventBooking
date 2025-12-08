@@ -1,5 +1,6 @@
 package com.eventmanagement.service;
 
+import java.sql.Connection;
 import java.util.List;
 
 import com.eventmanagement.model.Seat;
@@ -9,7 +10,7 @@ public class SeatService {
 
     private final SeatRepository seatRepository;
 
-    public SeatService(java.sql.Connection connection) {
+    public SeatService(Connection connection) {
         this.seatRepository = new SeatRepository(connection);
     }
 
