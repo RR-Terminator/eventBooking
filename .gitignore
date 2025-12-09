@@ -1,0 +1,121 @@
+############################
+# Java
+############################
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.zip
+*.tar.gz
+
+# Logs
+*.log
+logs/
+log/
+
+# JVM crash logs
+hs_err_pid*
+replay_pid*
+
+############################
+# IDEs & Editors
+############################
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Eclipse
+.project
+.classpath
+.settings/
+bin/
+
+# VS Code
+.vscode/
+
+# NetBeans
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+############################
+# Maven
+############################
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+############################
+# Gradle
+############################
+.gradle/
+build/
+**/build/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradlew
+!gradlew.bat
+
+############################
+# OS files
+############################
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+############################
+# Environment / Secrets
+############################
+.env
+.env.local
+*.key
+*.pem
+*.p12
+*.jks
+*.keystore
+
+############################
+# Database / Local data
+############################
+*.db
+*.sqlite
+*.mv.db
+*.h2.db
+data/
+
+############################
+# Temporary files
+############################
+tmp/
+temp/
+*.tmp
+*.swp
+*.swo
+
+############################
+# JetBrains Fleet
+############################
+.fleet/
+
+test/
