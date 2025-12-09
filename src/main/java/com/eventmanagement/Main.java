@@ -323,4 +323,9 @@ public class Main {
 //TODO Comparator Implementation
 //TODO Make SOLID Proof
 
+//TODO Change the Impl to more genrics as possible
+//TODO Add Custom Compartor logic 
+//TODO use of Streams 
+
+
 

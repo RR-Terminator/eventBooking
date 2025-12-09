@@ -5,11 +5,11 @@ import java.util.List;
 
 import com.eventmanagement.model.Booking;
 
-public class BookingRepository {
+public class BookingRepositoryImpl {
 
     private final java.sql.Connection connection;
 
-    public BookingRepository(java.sql.Connection connection) {
+    public BookingRepositoryImpl(java.sql.Connection connection) {
         this.connection = connection;
     }
 

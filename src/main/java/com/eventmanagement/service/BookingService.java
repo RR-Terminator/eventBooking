@@ -12,10 +12,10 @@ import com.eventmanagement.Exceptions.SeatAlreadyBookedException;
 import com.eventmanagement.model.Booking;
 import com.eventmanagement.model.Seat;
 import com.eventmanagement.model.SeatType;
-import com.eventmanagement.repository.BookingRepository;
 import com.eventmanagement.repository.EventRepository;
 import com.eventmanagement.repository.SeatRepository;
 import com.eventmanagement.repository.UserRepository;
+import com.eventmanagement.repository.RepositoryInterfaces.BookingRepository;
 
 public class BookingService {
 
@@ -25,7 +25,7 @@ public class BookingService {
     private final EventRepository eventRepository;
 
     public BookingService(java.sql.Connection connection) {
-        this.bookingRepository = new BookingRepository(connection);
+        this.bookingRepository = new BookingRepositoryImpl(connection);
         this.seatRepository = new SeatRepository(connection);
         this.userRepository = new UserRepository(connection);
         this.eventRepository = new EventRepository(connection);
